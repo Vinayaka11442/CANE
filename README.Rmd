@@ -1,0 +1,48 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# CANE
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+The goal of CANE is to support pooled analysis of variance (ANOVA) for the following designs: (1) 'PooledCRD()': completely randomized design; (2) 'PooledRBD()': randomized block design; (3) 'PooledLSD()': Latin square design; (4) 'PooledSPD()': split plot design; and (5) 'PooledStPD()': strip plot design.
+
+## Installation
+
+You can install the development version of CANE like so:
+package installation can be done directly by calling
+'devtools::install_github("Vinayaka11442/CANE")'
+
+
+## Example
+
+This is a basic example which shows you how to solve a common problem:
+
+```{r example}
+library(CANE)
+## basic example code
+# Creating a sample dataset for Pooled Completely Randomized Design (CRD)
+df <- data.frame(
+Loc = factor(rep(c("L1", "L2"), each = 9)), # Locations
+Treatment = factor(rep(c("T1", "T2", "T3"), times = 6)), # Treatments
+Yield = c(18, 7, 11, 10, 19, 12, 15, 8, 13,
+18, 5, 11, 7, 19, 21, 22, 9, 14) # Yield values
+)
+# Running PooledCRD function on the dataset
+out <- PooledCRD(df, "Yield", "Loc", "Treatment", 0.05, 1)
+# Print results
+print(out)
+```
