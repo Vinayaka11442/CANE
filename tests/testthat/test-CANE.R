@@ -1,7 +1,7 @@
 # tests/testthat/test-CANE.R
 # ---------------------------------------------------------------------------
 # Tests for the CANE package (Comprehensive Groups of Experiments Analysis
-# for Numerous Environments), version 0.1.1
+# for Numerous Environments), version 0.2.0
 #
 # Scope of these tests:
 #   * every exported pooled-analysis function runs on its documented example
@@ -33,26 +33,39 @@ run_quiet <- function(expr) {
   res
 }
 
-# Components documented for PooledCRD, PooledLSD, PooledRBD and PooledSPD
+# Components returned by every pooled function (see ?PooledCRD, Value)
 core_components <- c(
+  "Design",
   "Individual_ANOVA",
   "Location_wise",
   "Bartlett_Test",
+  "Levene_Test",
+  "Normality_Test",
+  "Transformation",
   "Pooled_ANOVA",
-  "Treatments_Comparison"
+  "Treatments_Comparison",
+  "Environment_Key",
+  "Settings"
 )
 
-# PooledStPD reports the interaction comparison instead of the treatment one
-strip_components <- c(
-  "Individual_ANOVA",
-  "Location_wise",
-  "Bartlett_Test",
-  "Pooled_ANOVA",
-  "Interaction_Comparison"
-)
+# PooledSPD and PooledStPD return the same components; their
+# Treatments_Comparison is a list with one comparison per error stratum
+# (see ?PooledSPD and ?PooledStPD, Value)
+strip_components <- core_components
+spd_strata  <- c("MainPlot", "SubPlot")
+stpd_strata <- c("RowFactor", "ColumnFactor", "Interaction")
+
+# Check that a stratified Treatments_Comparison has the documented parts
+expect_strata <- function(out, strata) {
+  tc <- out$Treatments_Comparison
+  expect_identical(names(tc), strata)
+  for (nm in strata) expect_s3_class(tc[[nm]], "cane_comparison")
+  invisible(out)
+}
 
 # Shared structural check applied to the output of every pooled function
 expect_pooled_output <- function(out, expected_names) {
+  expect_s3_class(out, "cane")
   expect_true(is.list(out))
   # setdiff() reports exactly which component is absent if this fails
   expect_identical(setdiff(expected_names, names(out)), character(0))
@@ -137,27 +150,28 @@ test_that("all five pooled analysis functions are exported", {
 test_that("exported functions take the documented arguments", {
   expect_identical(
     names(formals(PooledCRD)),
-    c("data", "Response", "Location", "Treatment", "alpha", "Mult_Comp_Test")
+    c("data", "Response", "Location", "Treatment", "alpha", "Mult_Comp_Test",
+      "transform", "env_effect")
   )
   expect_identical(
     names(formals(PooledRBD)),
     c("data", "Response", "Location", "Treatment", "Replication",
-      "alpha", "Mult_Comp_Test")
+      "alpha", "Mult_Comp_Test", "transform", "env_effect")
   )
   expect_identical(
     names(formals(PooledLSD)),
     c("data", "Response", "Location", "Treatment", "Row", "Column",
-      "alpha", "Mult_Comp_Test")
+      "alpha", "Mult_Comp_Test", "transform", "env_effect")
   )
   expect_identical(
     names(formals(PooledSPD)),
     c("data", "Response", "Location", "Replication", "MainPlot", "SubPlot",
-      "alpha", "Mult_Comp_Test")
+      "alpha", "Mult_Comp_Test", "transform", "env_effect")
   )
   expect_identical(
     names(formals(PooledStPD)),
     c("data", "Response", "Location", "Replication", "RowFactor",
-      "ColumnFactor", "alpha", "Mult_Comp_Test")
+      "ColumnFactor", "alpha", "Mult_Comp_Test", "transform", "env_effect")
   )
 })
 
@@ -237,6 +251,7 @@ test_that("PooledSPD returns the documented components", {
               0.05, 1)
   )
   expect_pooled_output(out, core_components)
+  expect_strata(out, spd_strata)
 })
 
 test_that("PooledSPD accepts Tukey's HSD, DMRT and LSD", {
@@ -247,6 +262,7 @@ test_that("PooledSPD accepts Tukey's HSD, DMRT and LSD", {
                 0.05, mct)
     )
     expect_pooled_output(out, core_components)
+    expect_strata(out, spd_strata)
   }
 })
 
@@ -262,6 +278,7 @@ test_that("PooledStPD returns the documented components", {
                "ColumnFactor", 0.05, 1)
   )
   expect_pooled_output(out, strip_components)
+  expect_strata(out, stpd_strata)
 })
 
 test_that("PooledStPD accepts Tukey's HSD, DMRT and LSD", {
@@ -272,6 +289,7 @@ test_that("PooledStPD accepts Tukey's HSD, DMRT and LSD", {
                  "ColumnFactor", 0.05, mct)
     )
     expect_pooled_output(out, strip_components)
+    expect_strata(out, stpd_strata)
   }
 })
 

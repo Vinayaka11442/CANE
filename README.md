@@ -4,145 +4,147 @@
 # CANE
 
 <!-- badges: start -->
-
 <!-- badges: end -->
 
-The goal of CANE is to support pooled analysis of variance (ANOVA) for
-the following designs: (1) ‘PooledCRD()’: completely randomized design;
-(2) ‘PooledRBD()’: randomized block design; (3) ‘PooledLSD()’: Latin
-square design; (4) ‘PooledSPD()’: split plot design; and (5)
-‘PooledStPD()’: strip plot design.
+**CANE** (Comprehensive Analysis of groups of experiments for Numerous
+Environments) performs the classical pooled analysis of variance of a
+balanced series of designed experiments repeated over locations, seasons
+or years.
+
+A single **design-specific** function call runs the whole workflow for
+one design. Choose the function that matches the design actually
+conducted; there is deliberately no omnibus function covering all five.
+
+| Design                       | Function       |
+|------------------------------|----------------|
+| Completely randomised design | `PooledCRD()`  |
+| Randomised block design      | `PooledRBD()`  |
+| Latin square design          | `PooledLSD()`  |
+| Split plot design            | `PooledSPD()`  |
+| Strip plot design            | `PooledStPD()` |
+
+Each call performs:
+
+1.  analysis of variance within each environment, with every effect
+    tested against the error term of its own stratum;
+2.  assessment of the homogeneity of the error variances: Bartlett’s
+    test on the environment-wise error mean squares (for every error
+    stratum in split plot and strip plot designs), the median-centred
+    Brown-Forsythe form of Levene’s test, environment-wise Shapiro-Wilk
+    tests and the ratio of the largest to the smallest error mean
+    square;
+3.  Aitken’s transformation, applied automatically, always or never
+    (`transform = "auto"`, `"always"` or `"never"`);
+4.  pooled analysis of variance in which the denominator of every F-test
+    is printed in an `Error` column; and
+5.  multiple comparison of means (Tukey’s HSD, Duncan’s multiple range
+    test or Fisher’s LSD) using the error mean square and degrees of
+    freedom of the stratum in which the compared factor belongs.
+
+When a treatment-by-environment interaction is significant, the result
+carries a note pointing to the environment-wise comparisons, which are
+always returned.
 
 ## Installation
 
-You can install the development version of CANE like so: package
-installation can be done directly by calling
-‘devtools::install_github(“Vinayaka11442/CANE”)’
+``` r
+# from CRAN
+install.packages("CANE")
+
+# development version from GitHub
+# install.packages("remotes")
+remotes::install_github("Vinayaka11442/CANE")
+```
 
 ## Example
 
-This is a basic example which shows you how to solve a common problem:
+Commercial cane sugar yield of 18 sugarcane genotypes in a randomised
+block design with two replications in six environments:
 
 ``` r
 library(CANE)
-## basic example code
-# Creating a sample dataset for Pooled Completely Randomized Design (CRD)
-df <- data.frame(
-Loc = factor(rep(c("L1", "L2"), each = 9)), # Locations
-Treatment = factor(rep(c("T1", "T2", "T3"), times = 6)), # Treatments
-Yield = c(18, 7, 11, 10, 19, 12, 15, 8, 13,
-18, 5, 11, 7, 19, 21, 22, 9, 14) # Yield values
-)
-# Running PooledCRD function on the dataset
-out <- PooledCRD(df, "Yield", "Loc", "Treatment", 0.05, 1)
-# Print results
-print(out)
-#> $Individual_ANOVA
-#> $Individual_ANOVA$L1
-#>             Df Sum Sq Mean Sq F value Pr(>F)
-#> Treatment    2  14.89   7.444   0.362   0.71
-#> Residuals    6 123.33  20.556               
+data(sugarcane)
+
+fit <- PooledRBD(data = sugarcane, Response = "ccsy", Location = "env",
+                 Treatment = "gen", Replication = "rep",
+                 alpha = 0.05, Mult_Comp_Test = 1)
+
+fit$Environment_Key
+#>      Level  n   Error_MS Error_df
+#> 1   SGA-IP 36 10.7245624       17
+#> 2  SGA-IIP 36 20.5435136       17
+#> 3    SGA-R 36 10.6075908       17
+#> 4  TCSM-IP 36  0.1605052       17
+#> 5 TCSM-IIP 36  1.3576430       17
+#> 6   TCSM-R 36  3.3007993       17
+fit$Bartlett_Test
 #> 
-#> $Individual_ANOVA$L2
-#>             Df Sum Sq Mean Sq F value Pr(>F)
-#> Treatment    2  40.67   20.33    0.44  0.663
-#> Residuals    6 277.33   46.22               
+#>  Bartlett's test for homogeneity of error variances (on error mean squares)
 #> 
-#> 
-#> $Location_wise
-#> $Location_wise$L1
-#> $Location_wise$L1$statistics
-#>    MSerror Df     Mean      CV     MSD
-#>   20.55556  6 12.55556 36.1101 11.3583
-#> 
-#> $Location_wise$L1$parameters
-#>    test    name.t ntr StudentizedRange alpha
-#>   Tukey Treatment   3         4.339195  0.05
-#> 
-#> $Location_wise$L1$means
-#>       Yield      std r       se Min Max  Q25 Q50  Q75
-#> T1 14.33333 4.041452 3 2.617604  10  18 12.5  15 16.5
-#> T2 11.33333 6.658328 3 2.617604   7  19  7.5   8 13.5
-#> T3 12.00000 1.000000 3 2.617604  11  13 11.5  12 12.5
-#> 
-#> $Location_wise$L1$comparison
-#> NULL
-#> 
-#> $Location_wise$L1$groups
-#>       Yield groups
-#> T1 14.33333      a
-#> T3 12.00000      a
-#> T2 11.33333      a
-#> 
-#> 
-#> $Location_wise$L2
-#> $Location_wise$L2$statistics
-#>    MSerror Df Mean       CV      MSD
-#>   46.22222  6   14 48.56209 17.03233
-#> 
-#> $Location_wise$L2$parameters
-#>    test    name.t ntr StudentizedRange alpha
-#>   Tukey Treatment   3         4.339195  0.05
-#> 
-#> $Location_wise$L2$means
-#>       Yield      std r       se Min Max  Q25 Q50  Q75
-#> T1 15.66667 7.767453 3 3.925227   7  22 12.5  18 20.0
-#> T2 11.00000 7.211103 3 3.925227   5  19  7.0   9 14.0
-#> T3 15.33333 5.131601 3 3.925227  11  21 12.5  14 17.5
-#> 
-#> $Location_wise$L2$comparison
-#> NULL
-#> 
-#> $Location_wise$L2$groups
-#>       Yield groups
-#> T1 15.66667      a
-#> T3 15.33333      a
-#> T2 11.00000      a
-#> 
-#> 
-#> 
-#> $Bartlett_Test
-#> 
-#>  Bartlett test of homogeneity of variances
-#> 
-#> data:  residuals_values and group_labels
-#> Bartlett's K-squared = 1.2036, df = 1, p-value = 0.2726
-#> 
-#> 
-#> $Pooled_ANOVA
-#> Analysis of Variance Table
-#> 
-#> Response: Yield
-#>               Df Sum Sq Mean Sq F value Pr(>F)
-#> Loc            1   9.39   9.389  0.2812 0.6056
-#> Treatment      2  45.44  22.722  0.6805 0.5249
-#> Loc:Treatment  2  10.11   5.056  0.1514 0.8611
-#> Residuals     12 400.67  33.389               
-#> 
-#> $Treatments_Comparison
-#> $statistics
-#>    MSerror Df     Mean       CV      MSD
-#>   33.38889 12 13.27778 43.51867 8.900286
-#> 
-#> $parameters
-#>    test    name.t ntr StudentizedRange alpha
-#>   Tukey Treatment   3         3.772929  0.05
-#> 
-#> $means
-#>       Yield      std r       se Min Max   Q25  Q50   Q75
-#> T1 15.00000 5.585696 6 2.358986   7  22 11.25 16.5 18.00
-#> T2 11.16667 6.210207 6 2.358986   5  19  7.25  8.5 16.50
-#> T3 13.66667 3.777124 6 2.358986  11  21 11.25 12.5 13.75
-#> 
-#> $comparison
-#> NULL
-#> 
-#> $groups
-#>       Yield groups
-#> T1 15.00000      a
-#> T3 13.66667      a
-#> T2 11.16667      a
-#> 
-#> attr(,"class")
-#> [1] "group"
+#> data:  environment-wise error mean squares
+#> Bartlett's K-squared = 81.17, df = 5, p-value = 4.77e-16
+#> ratio of largest to smallest error mean square = 128
+fit$Pooled_ANOVA
+#>  Source          Df  Sum Sq Mean Sq F value Pr(>F)  Sig Error         
+#>  Environment       5 30753. 6151.   1654.   2.5e-09 *** Rep within Env
+#>  Rep within Env    6 22.312 3.719   3.719   0.0022  **  Pooled error  
+#>  Treatment        17 503.72 29.63   29.63   < 1e-16 *** Pooled error  
+#>  Treatment x Env  85 1233.5 14.51   14.51   < 1e-16 *** Pooled error  
+#>  Pooled error    102 102.00 1.000                                     
+#>  Total           215 32614.                                           
+#> ---
+#> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+#> 'Error' names the mean square used as the denominator of each F-test.
+head(fit$Treatments_Comparison$groups)
+#>   Treatment     Mean Groups Mean_original_scale
+#> 1  Co 12009 13.93197      a            15.89367
+#> 2  Co 16018 13.66819      a            15.59433
+#> 3  Co 17012 12.84143     ab            15.19867
+#> 4  Co 14027 12.63899     ab            15.27950
+#> 5  Co 12008 11.83662     bc            12.86358
+#> 6  Co 86032 11.80427    bcd            14.23675
+```
+
+`print(fit)` shows the complete analysis. The error variances are
+strongly heterogeneous here, so the pooled analysis is carried out on
+the Aitken-transformed scale; the grouping letters refer to that scale,
+and the arithmetic means on the original scale are reported alongside
+them.
+
+## Validation
+
+Every design is checked against reference analyses specified
+independently of the package (stratified `aov()` fits with `Error()`
+strata, sums of squares accumulated from cell means, restricted maximum
+likelihood in **nlme**, design theory for the degrees of freedom, and
+the base-R distribution functions behind the post hoc procedures):
+
+``` r
+vignette("validation", package = "CANE")
+```
+
+## Scope
+
+CANE implements the fixed-effects pooled analysis of a **balanced**
+series. For other situations use:
+
+- unbalanced series or partly overlapping treatment sets: mixed models
+  with **lme4**, **nlme** or **sommer**, with **statgenSTA** for the
+  single-trial stage;
+- augmented designs: **augmentedRCBD** (archived on CRAN in April 2026
+  for an administrative reason; installable from its own repository);
+- AMMI, GGE biplots and stability statistics: **metan** or
+  **ammistability**.
+
+## Version 0.2.0
+
+Version 0.2.0 corrects defects in 0.1.1 that affected numerical results,
+including the error strata of the split plot and strip plot designs.
+Users who have published analyses produced with 0.1.1 should re-run
+them. See the NEWS file (`news(package = "CANE")`) for the full list.
+
+## Citation
+
+``` r
+citation("CANE")
 ```
