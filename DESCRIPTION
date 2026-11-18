@@ -1,7 +1,7 @@
 Package: CANE
 Type: Package
 Title: Comprehensive Groups of Experiments Analysis for Numerous Environments
-Version: 0.2.0
+Version: 0.2.1
 Authors@R: c(
     person(family = "Vinayaka",
            role = c("aut", "cre"),
